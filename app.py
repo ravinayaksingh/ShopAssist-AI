@@ -8,7 +8,7 @@ import pandas as pd
 import json
 
 # read the API key
-openai.api_key = open("openaikey.txt", "r").read().strip()
+openai.api_key = open(r"F:\Ravi\C55\OpenAI_API_Key.txt", "r").read().strip()
 
 app = Flask(__name__)
 

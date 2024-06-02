@@ -6,7 +6,7 @@ import re
 import pandas as pd
 import json
 
-openai.api_key = open(r"F:\Ravi\C55\OpenAI_API_Key.txt", "r").read().strip()
+openai.api_key = open("api_key.txt", "r").read().strip()
 
 def dialogue_mgmt_system():
     conversation = initialize_conversation()
@@ -47,7 +47,7 @@ def dialogue_mgmt_system():
             else:
                 print("\n" + response_assistant + "\n")
                 print('\n' + confirmation + '\n')
-                response = dictionary_present(response_assistant)
+                response = dictionary_present('assistant', response_assistant)
 
                 moderation = moderation_check(response)
                 if moderation == 'Flagged':

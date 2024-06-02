@@ -11,15 +11,15 @@ def initialize_conversation():
     '''
     
     delimiter = "####"
-    example_user_req = {'GPU intensity': 'high','Display quality': 'high','Portability': 'low','Multitasking': 'high','Processing speed': 'high','Budget': '150000'}
+    example_user_req = {'GPU intensity': 'high','Display quality': 'high','Portability': 'low','Multitasking': 'high','Processing speed': 'high', 'Storage type': 'medium','Budget': '150000'}
     
     system_message = f"""
 
     You are an intelligent laptop gadget expert and your goal is to find the best laptop for a user.
     You need to ask relevant questions and understand the user profile by analysing the user's responses.
-    You final objective is to fill the values for the different keys ('GPU intensity','Display quality','Portability','Multitasking','Processing speed','Budget') in the python dictionary and be confident of the values.
+    You final objective is to fill the values for the different keys ('GPU intensity','Display quality','Portability','Multitasking','Processing speed', 'Storage type','Budget') in the python dictionary and be confident of the values.
     These key value pairs define the user's profile.
-    The python dictionary looks like this {{'GPU intensity': 'values','Display quality': 'values','Portability': 'values','Multitasking': 'values','Processing speed': 'values','Budget': 'values'}}
+    The python dictionary looks like this {{'GPU intensity': 'values','Display quality': 'values','Portability': 'values','Multitasking': 'values','Processing speed': 'values','Storage type': 'values','Budget': 'values'}}
     The values for all keys, except 'budget', should be 'low', 'medium', or 'high' based on the importance of the corresponding keys, as stated by user. 
     The value for 'budget' should be a numerical value extracted from the user's response. 
     The values currently in the dictionary are only representative values. 
@@ -34,7 +34,7 @@ def initialize_conversation():
     To fill the dictionary, you need to have the following chain of thoughts:
     {delimiter} Thought 1: Ask a question to understand the user's profile and requirements. \n
     If their primary use for the laptop is unclear. Ask another question to comprehend their needs.
-    You are trying to fill the values of all the keys ('GPU intensity','Display quality','Portability','Multitasking','Processing speed','Budget') in the python dictionary by understanding the user requirements.
+    You are trying to fill the values of all the keys ('GPU intensity','Display quality','Portability','Multitasking','Processing speed', 'Storage type','Budget') in the python dictionary by understanding the user requirements.
     Identify the keys for which you can fill the values confidently using the understanding. \n
     Remember the instructions around the values for the different keys. 
     Answer "Yes" or "No" to indicate if you understand the requirements and have updated the values for the relevant keys. \n
@@ -58,8 +58,10 @@ def initialize_conversation():
     User: "I primarily work with After Effects."
     Assistant: "Thank you for providing that information. Working with After Effects involves working with graphics, animations, and rendering, which will require high GPU. Do you work with high-resolution media files, such as 4K videos or RAW photos? Understanding your file sizes will help determine the storage capacity and processing power needed."
     User: "Yes, sometimes I work with 4K videos as well."
-    Assistant: "Thank you for the information. Processing 4K vidoes will require a good processor and high GPU. I think we have already determined earlier that you need a high GPU. To ensure I have a complete understanding of your needs, I have one more question: Are you frequently on the go and require a laptop that is lightweight and easy to carry, or do you primarily work from a stationary location?"
+    Assistant: "Thank you for the information. Processing 4K vidoes will require a good processor and high GPU. I think we have already determined earlier that you need a high GPU. Are you frequently on the go and require a laptop that is lightweight and easy to carry, or do you primarily work from a stationary location?"
     User: "Yes, sometimes I travel but do not carry my laptop."
+    Assistant: "Great! Since you travel and carry your laptop, would you prefer faster SSD storage or larger HDD storage for mobility?"
+    User: "SSD"
     Assistant:"Could you kindly let me know your budget for the laptop? This will help me find options that fit within your price range while meeting the specified requirements."
     User: "my max budget is 1.5lakh inr"
     Assistant: "{example_user_req}"
@@ -70,20 +72,64 @@ def initialize_conversation():
     conversation = [{"role": "system", "content": system_message}]
     return conversation
 
+## Function Description for the Function Calling API
+function_descriptions = [
+            {
+                "name": "compare_laptops_with_user",
+                "description": "Get the top 3 laptops from the catalogue, that best matches what the user is asking based on 'GPU intensity','Display quality','Portability','Multitasking','Processing speed', 'Storage type' & 'Budget",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "gpu intensity": {
+                            "type": "string",
+                            "description": "The requirement of the user in GPU capacity classfied as low, medium or high" ,
+                        },
+                        "display quality": {
+                            "type": "string",
+                            "description": "The requirement of the user for Laptop's Display Quality & capacity classfied as low, medium or high" ,
+                        },
+                        "portability": {
+                            "type": "string",
+                            "description": "The requirement of the user for Laptop's portability classfied as low, medium or high" ,
+                        },
+                        "multitasking": {
+                            "type": "string",
+                            "description": "The requirement of the user for Laptop's Multitasking classfied as low, medium or high" ,
+                        },
+                        "processing speed": {
+                            "type": "string",
+                            "description": "The requirement of the user for Laptop's Processing speed classfied as low, medium or high" ,
+                        },
+                        "storage_type":{
+                            "type": "string",
+                            "description": "The requirement of the user for laptop's storage types as low, medium or high"
+                        },
+                        "budget": {
+                            "type": "integer",
+                            "description": "The maximum budget of the user" ,
+                        },
 
+                    },
+                    "required": ["GPU intensity","Display quality","Portability","Multitasking","Processing speed", "Storage type","Budget"],
+                },
+            }
+        ]
 
 def get_chat_model_completions(messages):
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-3.5-turbo-16k",
         messages=messages,
         temperature=0, # this is the degree of randomness of the model's output
-        max_tokens = 300
+        max_tokens = 300,
+        functions=function_descriptions,
+        function_call="auto",
     )
     return response.choices[0].message["content"]
 
-
-
 def moderation_check(user_input):
+    if type(user_input) != str:
+        return "Flagged"
+    
     response = openai.Moderation.create(input=user_input)
     moderation_output = response["results"][0]
     if moderation_output["flagged"] == True:
@@ -91,59 +137,102 @@ def moderation_check(user_input):
     else:
         return "Not Flagged"
 
-
-def intent_confirmation_layer(response_assistant):
+def intent_confirmation_layer(role, response_assistant):
     delimiter = "####"
-    prompt = f"""
+    content = f"""
     You are a senior evaluator who has an eye for detail.
     You are provided an input. You need to evaluate if the input has the following keys: 'GPU intensity','Display quality','Portability','Multitasking',' Processing speed','Budget'
     Next you need to evaluate if the keys have the the values filled correctly.
     The values for all keys, except 'budget', should be 'low', 'medium', or 'high' based on the importance as stated by user. The value for the key 'budget' needs to contain a number with currency.
-    Output a string 'Yes' if the values are correctly filled for all keys listed above.
+    Output a string 'Yes' if the input contains the dictionary with the values correctly filled for all keys.
     Otherwise out the string 'No'.
+
+    Here are some sample input output pairs for better understanding:
+    {delimiter}
+    input: "{{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'low', 'Storage type':'low'}}"
+    output: No
+
+    input: "{{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': '', 'Storage type':'low', 'Budget': '90000'}}"
+    output: No
+
+    input: "Here is your user profile 'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'low','Processing speed': 'high', 'Storage type':'medium','Budget': '200000'"
+    output: Yes
+
+    input: "Here is your recommendation {{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'low', 'Storage type':'high', 'Budget': '90000'}}"
+    output: Yes
+
+    input: "Here is your recommendation - 'GPU intensity': 'high' - 'Display quality': 'low' - 'Portability': 'low'  - 'Multitasking': 'high' - 'Processing speed': 'high' - 'Storage type':'medium' - 'Budget': '90000' "
+    output: Yes
+
+    input: "You can look at this - GPU intensity: high - Display quality: low - Portability: low  - Multitasking: high - Processing speed: high - Storage type: medium - Budget: 90000"
+    output: Yes
+
+    input: "{{GPU intensity: low, Display quality: high, Portability: low, Multitasking:high,Processing speed: Low, Storage type:low, Budget: 70000}}"
+    output: No
+
+    {delimiter}
+
+    Here is the input: {response_assistant}
     Only output a one-word string - Yes/No.
     """
-    messages=[{"role": "system", "content":prompt },{"role": "user", "content":f"""Here is the input: {response_assistant}""" }]
+
     confirmation = openai.ChatCompletion.create(
-                                    model="gpt-3.5-turbo",
-                                    messages = messages)
+    model="gpt-3.5-turbo",
+    messages=[
+        {
+        "role": role,
+        "content": content
+        }
+    ],
+    temperature=0,
+    max_tokens=256,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0
+    )
 
     return confirmation.choices[0].message.content
 
-
-
-
-def dictionary_present(response):
+def dictionary_present(role,input_response):
     delimiter = "####"
-    user_req = {'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'high','Processing speed': 'high','Budget': '200000 INR'}
-    prompt = f"""You are a python expert. You are provided an input.
+    user_req = {'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'high','Processing speed': 'high', 'Storage type':'medium','Budget': '200000 INR'}
+    content = f"""You are a python expert. You are provided an input.
             You have to check if there is a python dictionary present in the string.
             It will have the following format {user_req}.
             Your task is to just extract and return only the python dictionary from the input.
             The output should match the format as {user_req}.
-            ###Make sure that the value of budget is also present in the user input.###
             The output should contain the exact keys and values as present in the input.
 
             Here are some sample input output pairs for better understanding:
             {delimiter}
-            input: - GPU intensity: low - Display quality: high - Portability: low - Multitasking: high - Processing speed: medium - Budget: 50,000 INR
-            output: {{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'medium', 'Budget': '50000'}}
+            input: - GPU intensity: low - Display quality: high - Portability: low - Multitasking: high - Processing speed: medium -  Storage type:medium - Budget: 50,000 INR
+            output: {{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'medium', 'Storage type':'medium', 'Budget': '50000'}}
 
-            input: {{'GPU intensity':     'low', 'Display quality':     'high', 'Portability':    'low', 'Multitasking': 'high', 'Processing speed': 'medium', 'Budget': '90,000'}}
-            output: {{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'medium', 'Budget': '90000'}}
+            input: {{'GPU intensity':     'low', 'Display quality':     'high', 'Portability':    'low', 'Multitasking': 'high', 'Processing speed':    'medium', 'Storage type':    'medium', 'Budget':    '90,000'}}
+            output: {{'GPU intensity': 'low', 'Display quality': 'high', 'Portability': 'low', 'Multitasking': 'high', 'Processing speed': 'medium', 'Storage type':'medium', 'Budget': '90000'}}
 
-            input: Here is your user profile 'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'low','Processing speed': 'high','Budget': '200000 INR'
-            output: {{'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'high','Processing speed': 'low','Budget': '200000'}}
+            input: Here is your user profile 'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'low','Processing speed': 'high', 'Storage type':'medium', 'Budget': '200000 INR'
+            output: {{'GPU intensity': 'high','Display quality': 'high','Portability': 'medium','Multitasking': 'high','Processing speed': 'low', 'Storage type':'medium', 'Budget': '200000'}}
             {delimiter}
 
+            Here is the input {input_response}
+
+            Don't create any function for extracting the dictionary. Output must be only a python dictionary and not a function for extracting the dictionary.
+
             """
-    messages=[{"role": "system", "content":prompt },{"role": "user", "content":f"""Here is the user input: {response}""" }]
-    confirmation = openai.ChatCompletion.create(
-                                    model="gpt-3.5-turbo",
-                                    messages = messages)
-
-    return confirmation.choices[0].message.content
-
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-16k",
+        messages=[
+                    {
+                    "role": role,
+                    "content": content
+                    }
+                ],
+        max_tokens = 2000,
+        temperature=0.3, # this is the degree of randomness of the model's output
+        top_p=0.4,
+    )
+    return response["choices"][0].message
 
 
 def extract_dictionary_from_string(string):
@@ -159,9 +248,6 @@ def extract_dictionary_from_string(string):
         # Convert the dictionary string to a dictionary object using ast.literal_eval()
         dictionary = ast.literal_eval(dictionary_string)
     return dictionary
-
-
-
 
 def compare_laptops_with_user(user_req_string):
     laptop_df= pd.read_csv('updated_laptop.csv')

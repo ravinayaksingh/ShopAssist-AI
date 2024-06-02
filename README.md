@@ -20,24 +20,6 @@ Ensures clarity and confirmation of user requirements through intent evaluation 
 Implements safety measures to detect and respond to inappropriate user queries or inputs.
 ## Chatbot System Design
 
-![Stages of ShopAssist AI](https://github.com/rajuaiml777/ShopAssistAI/blob/main/data/stages.png)
-![Chatbot System Design](https://github.com/rajuaiml777/ShopAssistAI/blob/main/data/systemdesign.png)
-
-## Getting Started
-
-To get started with ShopAssist AI, follow these steps:
-
-1. **Install dependencies:**
-```   
-pip install -r requirements.txt
-```
-2. **Initialize the conversation:**  
-```
-python app.py
-```
-## Contributing
-
-Contributions are welcome! Fork the repository, make your changes, and submit a pull request. Thank you for contributing!
 
 ## Acknowledgments
 

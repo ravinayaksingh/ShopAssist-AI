@@ -18,7 +18,6 @@ Ensures clarity and confirmation of user requirements through intent evaluation 
 
 ### Safe Design
 Implements safety measures to detect and respond to inappropriate user queries or inputs.
-## Chatbot System Design
 
 
 ## Acknowledgments

@@ -27,16 +27,11 @@ Implements safety measures to detect and respond to inappropriate user queries o
 
 To get started with ShopAssist AI, follow these steps:
 
-1. **Clone the repository:**
-   ```
-   git clone https://github.com/rajuaiml777/ShopAssistAI.git
-   cd ShopAssistAI
-   ```
-2. **Install dependencies:**
+1. **Install dependencies:**
 ```   
 pip install -r requirements.txt
 ```
-3. **Initialize the conversation:**  
+2. **Initialize the conversation:**  
 ```
 python app.py
 ```
